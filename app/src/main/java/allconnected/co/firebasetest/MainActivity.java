@@ -21,10 +21,11 @@
 
 package allconnected.co.firebasetest;
 
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -32,15 +33,13 @@ import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.remoteconfig.FirebaseRemoteConfig;
-import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import co.allconnected.ad.AdConfigManager;
+import co.allconnected.ad.bean.AdConfigBean;
 
 /**
  * firebase测试类，firebase使用需要翻墙
+ *
  * @author michael
  * @time 17/1/9 下午8:39
  */
@@ -53,8 +52,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String CONNECTED = "connected";
     private static final String WELCOME_MESSAGE_CAPS_KEY = "welcome_message_caps";
 
-    private FirebaseRemoteConfig mFirebaseRemoteConfig;
     private TextView mWelcomeTextView;
+    private AlertDialog mAlertDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,35 +66,12 @@ public class MainActivity extends AppCompatActivity {
         fetchButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                fetchWelcome();
+//                fetchWelcome();
+                displayWelcomeMessage();
+
             }
         });
 
-        // Get Remote Config instance.
-        // [START get_remote_config_instance]
-        mFirebaseRemoteConfig = FirebaseRemoteConfig.getInstance();
-        // [END get_remote_config_instance]
-
-        // Create Remote Config Setting to enable developer mode.
-        // Fetching configs from the server is normally limited to 5 requests per hour.
-        // Enabling developer mode allows many more requests to be made per hour, so developers
-        // can test different config values during development.
-        // [START enable_dev_mode]
-        FirebaseRemoteConfigSettings configSettings = new FirebaseRemoteConfigSettings.Builder()
-                .setDeveloperModeEnabled(BuildConfig.DEBUG)
-                .build();
-        mFirebaseRemoteConfig.setConfigSettings(configSettings);
-        // [END enable_dev_mode]
-
-        // Set default Remote Config values. In general you should have in app defaults for all
-        // values that you may configure using Remote Config later on. The idea is that you
-        // use the in app defaults and when you need to adjust those defaults, you set an updated
-        // value in the App Manager console. Then the next time you application fetches from the
-        // server, the updated value will be used. You can set defaults via an xml file like done
-        // here or you can set defaults inline by using one of the other setDefaults methods.S
-        // [START set_default_values]
-        mFirebaseRemoteConfig.setDefaults(R.xml.remote_config_defaults);
-        // [END set_default_values]
 
         fetchWelcome();
     }
@@ -104,39 +80,21 @@ public class MainActivity extends AppCompatActivity {
      * Fetch welcome message from server.
      */
     private void fetchWelcome() {
-        mWelcomeTextView.setText(mFirebaseRemoteConfig.getString(LOADING_PHRASE_CONFIG_KEY));
+        String textStr=null;
+        mWelcomeTextView.setText(textStr);
+        AdConfigManager.fetchAdConfig(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                if (task.isSuccessful()){
+                    Toast.makeText(MainActivity.this, "Fetch succeeded", Toast.LENGTH_SHORT).show();
 
-        long cacheExpiration = 3600; // 1 hour in seconds.
-        // If in developer mode cacheExpiration is set to 0 so each fetch will retrieve values from
-        // the server.
-        if (mFirebaseRemoteConfig.getInfo().getConfigSettings().isDeveloperModeEnabled()) {
-            cacheExpiration = 0;
-        }
+                }else{
 
-        // [START fetch_config_with_callback]
-        // cacheExpirationSeconds is set to cacheExpiration here, indicating that any previously
-        // fetched and cached config would be considered expired because it would have been fetched
-        // more than cacheExpiration seconds ago. Thus the next fetch would go to the server unless
-        // throttling is in progress. The default expiration duration is 43200 (12 hours).
-        mFirebaseRemoteConfig.fetch(cacheExpiration)
-                .addOnCompleteListener(this, new OnCompleteListener<Void>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Void> task) {
-                        if (task.isSuccessful()) {
-                            Toast.makeText(MainActivity.this, "Fetch Succeeded",
-                                    Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "Fetch failed", Toast.LENGTH_SHORT).show();
 
-                            // Once the config is successfully fetched it must be activated before newly fetched
-                            // values are returned.
-                            mFirebaseRemoteConfig.activateFetched();
-                        } else {
-                            Toast.makeText(MainActivity.this, "Fetch Failed",
-                                    Toast.LENGTH_SHORT).show();
-                        }
-                        displayWelcomeMessage();
-                    }
-                });
-        // [END fetch_config_with_callback]
+                }
+            }
+        });
     }
 
     /**
@@ -145,37 +103,42 @@ public class MainActivity extends AppCompatActivity {
      */
     // [START display_welcome_message]
     private void displayWelcomeMessage() {
+        String connectedStr=null;
         // [START get_config_values]
-        String connectedStr = mFirebaseRemoteConfig.getString(CONNECTED);
-
-        JSONObject jsonObject = null;
-        try {
-            jsonObject = new JSONObject(connectedStr);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        if (jsonObject != null) {
-            try {
-                boolean enabled = jsonObject.getBoolean("enable");
-                JSONArray adArray = jsonObject.getJSONArray("ad");
-                if (adArray != null && adArray.length() > 0) {
-                    JSONObject adObject = adArray.getJSONObject(0);
-                    int platformId = adObject.getInt("platformId");
-                    Log.d(TAG, "displayWelcomeMessage: platformId_" + platformId);
-
-                }
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-
+        connectedStr = AdConfigManager.getAdConfigStr(CONNECTED);
+        AdConfigBean adConfigBean = AdConfigManager.getAdConfigBean(CONNECTED);
         // [END get_config_values]
-        if (mFirebaseRemoteConfig.getBoolean(WELCOME_MESSAGE_CAPS_KEY)) {
+        boolean setAllCaps = false;
+        if (setAllCaps) {
             mWelcomeTextView.setAllCaps(true);
         } else {
             mWelcomeTextView.setAllCaps(false);
         }
+
         mWelcomeTextView.setText(connectedStr);
     }
     // [END display_welcome_message]
+
+    int mPressbackCount = 0;
+
+    @Override
+    public void onBackPressed() {
+        mPressbackCount++;
+        if (mPressbackCount == 1) {
+            mAlertDialog = new AlertDialog.Builder(this).setMessage("Are you sure to exit?").setPositiveButton("Exit", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                    finish();
+                }
+            }).setNegativeButton("Cancel", null).create();
+            mAlertDialog.show();
+            mAlertDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                @Override
+                public void onDismiss(DialogInterface dialog) {
+                    finish();
+                }
+            });
+        }
+    }
 }
