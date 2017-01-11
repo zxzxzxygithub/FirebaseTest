@@ -66,8 +66,7 @@ public class MainActivity extends AppCompatActivity {
         fetchButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                fetchWelcome();
-                displayWelcomeMessage();
+                fetchWelcome();
 
             }
         });
@@ -80,15 +79,15 @@ public class MainActivity extends AppCompatActivity {
      * Fetch welcome message from server.
      */
     private void fetchWelcome() {
-        String textStr=null;
+        String textStr = null;
         mWelcomeTextView.setText(textStr);
         AdConfigManager.fetchAdConfig(new OnCompleteListener<Void>() {
             @Override
             public void onComplete(@NonNull Task<Void> task) {
-                if (task.isSuccessful()){
+                if (task.isSuccessful()) {
                     Toast.makeText(MainActivity.this, "Fetch succeeded", Toast.LENGTH_SHORT).show();
-
-                }else{
+                    displayWelcomeMessage();
+                } else {
 
                     Toast.makeText(MainActivity.this, "Fetch failed", Toast.LENGTH_SHORT).show();
 
@@ -103,7 +102,7 @@ public class MainActivity extends AppCompatActivity {
      */
     // [START display_welcome_message]
     private void displayWelcomeMessage() {
-        String connectedStr=null;
+        String connectedStr = null;
         // [START get_config_values]
         connectedStr = AdConfigManager.getAdConfigStr(CONNECTED);
         AdConfigBean adConfigBean = AdConfigManager.getAdConfigBean(CONNECTED);
